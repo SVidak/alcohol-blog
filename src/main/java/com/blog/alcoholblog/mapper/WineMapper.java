@@ -4,10 +4,7 @@ import com.blog.alcoholblog.dto.CreateWineRequestDTO;
 import com.blog.alcoholblog.dto.UpdateWineRequestDTO;
 import com.blog.alcoholblog.dto.WineResponseDTO;
 import com.blog.alcoholblog.model.Wine;
-import org.mapstruct.BeanMapping;
-import org.mapstruct.Mapper;
-import org.mapstruct.MappingTarget;
-import org.mapstruct.NullValuePropertyMappingStrategy;
+import org.mapstruct.*;
 
 import java.util.List;
 
@@ -17,6 +14,7 @@ public interface WineMapper {
 
     WineResponseDTO toWineResponseDTO(Wine wine);
 
+    @Mapping(target = "id", ignore = true)
     Wine toWine(CreateWineRequestDTO createWineRequestDTO);
 
     List<WineResponseDTO> toWineResponseDTOList(List<Wine> wines);

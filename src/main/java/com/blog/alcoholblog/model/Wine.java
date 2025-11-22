@@ -66,7 +66,7 @@ public class Wine {
     private Double score;
 
     @NotBlank
-    @Column(name = "description", nullable = false)
+    @Column(name = "description", nullable = false, columnDefinition = "TEXT")
     private String description;
 
     @NotBlank
