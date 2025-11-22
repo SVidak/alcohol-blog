@@ -1,6 +1,6 @@
 package com.blog.alcoholblog.controller;
 
-import com.blog.alcoholblog.model.Wine;
+import com.blog.alcoholblog.dto.WineResponseDTO;
 import com.blog.alcoholblog.services.WineService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -16,7 +16,7 @@ public class WineController {
     private final WineService wineService;
 
     @GetMapping("/wines")
-    public ResponseEntity<List<Wine>> getAllWines() {
+    public ResponseEntity<List<WineResponseDTO>> getAllWines() {
         return ResponseEntity.ok(wineService.getAllWines());
     }
 
