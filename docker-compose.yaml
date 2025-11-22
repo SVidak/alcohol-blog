@@ -1,0 +1,37 @@
+services:
+  alcohol-blog-db:
+    image: postgres:latest
+    container_name: alcohol-blog-db
+    ports:
+      - "5001:5432"
+    environment:
+      POSTGRES_DB: db
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - /Users/mac/IdeaProjects/alcohol-blog-db-volumes/alcohol-blog-db:/var/lib/postgresql/data
+    networks:
+      - internal
+
+  alcohol-blog:
+    image: alcohol-blog:latest
+    container_name: alcohol-blog
+    ports:
+      - "${APP_PORT}:${APP_PORT}"
+    environment:
+      SPRING_DATASOURCE_URL: ${DB_URL}
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      APP_PORT: ${APP_PORT}
+    depends_on:
+      - alcohol-blog-db
+    networks:
+      - internal
+
+
+volumes:
+  alcohol-blog-db-volumes:
+
+networks:
+  internal:
+    driver: bridge
