@@ -1,8 +1,7 @@
 package com.blog.alcoholblog.dto;
 
 
-public record WineResponseDTO(
-        String id,
+public record CreateWineRequestDTO(
         String name,
         Integer year,
         String color,
