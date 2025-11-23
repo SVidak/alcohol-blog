@@ -6,6 +6,7 @@ import com.blog.alcoholblog.services.WineService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
@@ -30,9 +31,11 @@ public class WineController {
 
     @GetMapping
     public ResponseEntity<List<WineResponseDTO>> getAllWines(@RequestParam(required = false, defaultValue = "1") int pageNo,
-                                                             @RequestParam(required = false, defaultValue = "12") int pageSize) {
+                                                             @RequestParam(required = false, defaultValue = "12") int pageSize,
+                                                             @RequestParam(required = false, defaultValue = "name") String sortBy,
+                                                             @RequestParam(required = false, defaultValue = "ASC") String sortOrder) {
 
-        PageRequest pageRequest = PageRequest.of(pageNo-1, pageSize);
+        PageRequest pageRequest = PageRequest.of(pageNo - 1, pageSize, createSort(sortBy, sortOrder));
 
         return ResponseEntity.ok(wineService.getAllWines(pageRequest));
     }
@@ -48,5 +51,19 @@ public class WineController {
                 .toUri();
 
         return ResponseEntity.created(location).body(createdWine);
+    }
+
+    private Sort createSort(String sortBy, String sortOrder) {
+        Sort sort;
+        if(sortOrder.equalsIgnoreCase("ASC")){
+            sort = Sort.by(sortBy).ascending();
+        }
+        else if(sortOrder.equalsIgnoreCase("DESC")){
+            sort = Sort.by(sortBy).descending();
+        }
+        else {
+            throw new IllegalArgumentException("Invalid sort parameter");
+        }
+        return sort;
     }
 }
