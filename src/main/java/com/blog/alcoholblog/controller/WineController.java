@@ -2,10 +2,10 @@ package com.blog.alcoholblog.controller;
 
 import com.blog.alcoholblog.dto.CreateWineRequestDTO;
 import com.blog.alcoholblog.dto.WineResponseDTO;
-import com.blog.alcoholblog.model.Wine;
 import com.blog.alcoholblog.services.WineService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
@@ -29,8 +29,12 @@ public class WineController {
     }
 
     @GetMapping
-    public ResponseEntity<List<WineResponseDTO>> getAllWines() {
-        return ResponseEntity.ok(wineService.getAllWines());
+    public ResponseEntity<List<WineResponseDTO>> getAllWines(@RequestParam(required = false, defaultValue = "1") int pageNo,
+                                                             @RequestParam(required = false, defaultValue = "12") int pageSize) {
+
+        PageRequest pageRequest = PageRequest.of(pageNo-1, pageSize);
+
+        return ResponseEntity.ok(wineService.getAllWines(pageRequest));
     }
 
     @PostMapping

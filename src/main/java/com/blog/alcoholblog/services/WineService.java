@@ -7,6 +7,7 @@ import com.blog.alcoholblog.mapper.WineMapper;
 import com.blog.alcoholblog.model.Wine;
 import com.blog.alcoholblog.repository.WineRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,8 +27,8 @@ public class WineService {
         return wineMapper.toWineResponseDTO(wine);
     }
 
-    public List<WineResponseDTO> getAllWines() {
-        return wineMapper.toWineResponseDTOList(wineRepository.findAll());
+    public List<WineResponseDTO> getAllWines(Pageable pageable) {
+        return wineMapper.toWineResponseDTOList(wineRepository.findAll(pageable).getContent());
     }
 
     @Transactional

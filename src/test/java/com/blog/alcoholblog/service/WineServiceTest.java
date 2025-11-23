@@ -12,6 +12,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Optional;
@@ -95,31 +98,31 @@ class WineServiceTest {
 
         List<WineResponseDTO> expectedResponses = List.of(response1, response2);
 
-        when(wineRepository.findAll()).thenReturn(wines);
+        when(wineRepository.findAll(any(Pageable.class))).thenReturn(new PageImpl<>(wines));
         when(wineMapper.toWineResponseDTOList(wines)).thenReturn(expectedResponses);
 
-        List<WineResponseDTO> result = wineService.getAllWines();
+        List<WineResponseDTO> result = wineService.getAllWines(Pageable.unpaged());
 
         assertNotNull(result);
         assertEquals(2, result.size());
         assertEquals("Wine 1", result.get(0).name());
         assertEquals("Wine 2", result.get(1).name());
 
-        verify(wineRepository, times(1)).findAll();
+        verify(wineRepository, times(1)).findAll(any(Pageable.class));
         verify(wineMapper, times(1)).toWineResponseDTOList(wines);
     }
 
     @Test
     void testGetAllWines_Empty() {
-        when(wineRepository.findAll()).thenReturn(List.of());
+        when(wineRepository.findAll(any(Pageable.class))).thenReturn(Page.empty());
         when(wineMapper.toWineResponseDTOList(List.of())).thenReturn(List.of());
 
-        List<WineResponseDTO> result = wineService.getAllWines();
+        List<WineResponseDTO> result = wineService.getAllWines(Pageable.unpaged());
 
         assertNotNull(result);
         assertTrue(result.isEmpty());
 
-        verify(wineRepository, times(1)).findAll();
+        verify(wineRepository, times(1)).findAll(any(Pageable.class));
         verify(wineMapper, times(1)).toWineResponseDTOList(List.of());
     }
 
