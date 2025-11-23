@@ -1,7 +1,9 @@
 package com.blog.alcoholblog.controller;
 
 import com.blog.alcoholblog.dto.CreateWineRequestDTO;
+import com.blog.alcoholblog.dto.PageResponseDTO;
 import com.blog.alcoholblog.dto.WineResponseDTO;
+import com.blog.alcoholblog.dto.WineSearchCriteriaDTO;
 import com.blog.alcoholblog.services.WineService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -12,7 +14,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
-import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -30,14 +31,15 @@ public class WineController {
     }
 
     @GetMapping
-    public ResponseEntity<List<WineResponseDTO>> getAllWines(@RequestParam(required = false, defaultValue = "1") int pageNo,
+    public ResponseEntity<PageResponseDTO<WineResponseDTO>> getAllWines(@RequestParam(required = false, defaultValue = "1") int pageNo,
                                                              @RequestParam(required = false, defaultValue = "12") int pageSize,
                                                              @RequestParam(required = false, defaultValue = "name") String sortBy,
-                                                             @RequestParam(required = false, defaultValue = "ASC") String sortOrder) {
+                                                             @RequestParam(required = false, defaultValue = "ASC") String sortOrder,
+                                                             @ModelAttribute WineSearchCriteriaDTO criteriaDTO) {
 
         PageRequest pageRequest = PageRequest.of(pageNo - 1, pageSize, createSort(sortBy, sortOrder));
 
-        return ResponseEntity.ok(wineService.getAllWines(pageRequest));
+        return ResponseEntity.ok(wineService.getAllWines(pageRequest, criteriaDTO));
     }
 
     @PostMapping

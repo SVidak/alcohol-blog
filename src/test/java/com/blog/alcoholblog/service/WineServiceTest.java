@@ -1,7 +1,9 @@
 package com.blog.alcoholblog.service;
 
 import com.blog.alcoholblog.dto.CreateWineRequestDTO;
+import com.blog.alcoholblog.dto.PageResponseDTO;
 import com.blog.alcoholblog.dto.WineResponseDTO;
+import com.blog.alcoholblog.dto.WineSearchCriteriaDTO;
 import com.blog.alcoholblog.exception.WineNotFoundException;
 import com.blog.alcoholblog.mapper.WineMapper;
 import com.blog.alcoholblog.model.Wine;
@@ -12,9 +14,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.*;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.util.List;
 import java.util.Optional;
@@ -22,6 +23,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -75,7 +77,146 @@ class WineServiceTest {
     }
 
     @Test
-    void testGetAllWines_Success() {
+    void testGetAllWines_WithSearchCriteria_Success() {
+        // Given
+        WineSearchCriteriaDTO criteria = new WineSearchCriteriaDTO(
+                "Test Wine",     // name
+                "Red",           // color
+                "Test Winery",   // winery
+                "Dry",           // kind
+                "France",        // country
+                "Bordeaux",      // region
+                2020,            // year
+                4.0,             // minScore
+                5.0,             // maxScore
+                12.0,            // minAlcohol
+                15.0             // maxAlcohol
+        );
+
+        Pageable pageable = PageRequest.of(0, 10, Sort.by("name").ascending());
+
+        Wine wine1 = new Wine();
+        wine1.setId(UUID.randomUUID());
+        wine1.setName("Test Wine 1");
+        wine1.setColor("Red");
+        wine1.setWinery("Test Winery");
+        wine1.setYear(2020);
+        wine1.setScore(4.5);
+        wine1.setAlcohol(13.5);
+
+        Wine wine2 = new Wine();
+        wine2.setId(UUID.randomUUID());
+        wine2.setName("Test Wine 2");
+        wine2.setColor("Red");
+        wine2.setWinery("Test Winery");
+        wine2.setYear(2020);
+        wine2.setScore(4.2);
+        wine2.setAlcohol(14.0);
+
+        List<Wine> filteredWines = List.of(wine1, wine2);
+        Page<Wine> winePage = new PageImpl<>(filteredWines, pageable, 2);
+
+        WineResponseDTO response1 = new WineResponseDTO(
+                wine1.getId().toString(), "Test Wine 1", 2020, "Red", "Dry", "Test Winery",
+                "Merlot", 1.0, 13.5, "France", "Bordeaux", 4.5, "Desc", "pic1.jpg"
+        );
+
+        WineResponseDTO response2 = new WineResponseDTO(
+                wine2.getId().toString(), "Test Wine 2", 2020, "Red", "Dry", "Test Winery",
+                "Cabernet", 0.75, 14.0, "France", "Bordeaux", 4.2, "Desc2", "pic2.jpg"
+        );
+
+        List<WineResponseDTO> expectedResponses = List.of(response1, response2);
+
+        // Mock the repository to accept any Specification and return filtered results
+        when(wineRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(winePage);
+        when(wineMapper.toWineResponseDTOList(filteredWines)).thenReturn(expectedResponses);
+
+        // When
+        PageResponseDTO<WineResponseDTO> result = wineService.getAllWines(pageable, criteria);
+
+        // Then
+        assertNotNull(result);
+        assertEquals(2, result.content().size());
+        assertEquals(1, result.currentPage());
+        assertEquals(1, result.totalPages());
+        assertEquals(2, result.totalElements());
+        assertEquals(10, result.size());
+
+        // Access the content first, then the properties
+        WineResponseDTO firstWine = (WineResponseDTO) result.content().get(0);
+        WineResponseDTO secondWine = (WineResponseDTO) result.content().get(1);
+        assertEquals("Test Wine 1", firstWine.name());
+        assertEquals("Test Wine 2", secondWine.name());
+
+        // Verify that repository was called with Specification and pageable
+        verify(wineRepository, times(1)).findAll(any(Specification.class), eq(pageable));
+        verify(wineMapper, times(1)).toWineResponseDTOList(filteredWines);
+    }
+
+    @Test
+    void testGetAllWines_WithPartialSearchCriteria_Success() {
+        // Given - only some criteria provided
+        WineSearchCriteriaDTO criteria = new WineSearchCriteriaDTO(
+                "Merlot",    // name
+                null,        // color - not provided
+                null,        // winery - not provided
+                null,        // kind - not provided
+                "France",    // country
+                null,        // region - not provided
+                2020,        // year
+                null,        // minScore - not provided
+                4.5,         // maxScore
+                null,        // minAlcohol - not provided
+                null         // maxAlcohol - not provided
+        );
+
+        Pageable pageable = PageRequest.of(0, 10);
+
+        Wine wine = new Wine();
+        wine.setId(UUID.randomUUID());
+        wine.setName("Merlot Reserve");
+        wine.setCountry("France");
+        wine.setYear(2020);
+        wine.setScore(4.3);
+
+        List<Wine> filteredWines = List.of(wine);
+        Page<Wine> winePage = new PageImpl<>(filteredWines, pageable, 1);
+
+        WineResponseDTO expectedResponse = new WineResponseDTO(
+                wine.getId().toString(), "Merlot Reserve", 2020, "Red", "Dry", "French Winery",
+                "Merlot", 0.75, 13.0, "France", "Bordeaux", 4.3, "Description", "pic.jpg"
+        );
+
+        when(wineRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(winePage);
+        when(wineMapper.toWineResponseDTOList(filteredWines)).thenReturn(List.of(expectedResponse));
+
+        // When
+        PageResponseDTO<WineResponseDTO> result = wineService.getAllWines(pageable, criteria);
+
+        // Then
+        assertNotNull(result);
+        assertEquals(1, result.content().size());
+        assertEquals(1, result.currentPage());
+        assertEquals(1, result.totalPages());
+        assertEquals(1, result.totalElements());
+        assertEquals(10, result.size());
+
+        // Access the content first, then the properties
+        WineResponseDTO wineResponse = result.content().get(0);
+        assertEquals("Merlot Reserve", wineResponse.name());
+        assertEquals("France", wineResponse.country());
+        assertEquals(2020, wineResponse.year());
+
+        verify(wineRepository, times(1)).findAll(any(Specification.class), eq(pageable));
+        verify(wineMapper, times(1)).toWineResponseDTOList(filteredWines);
+    }
+
+    @Test
+    void testGetAllWines_WithNullCriteria_ReturnsAllWines() {
+        // Given - null criteria should return all wines
+        Pageable pageable = PageRequest.of(0, 10);
+
         Wine wine1 = new Wine();
         wine1.setId(UUID.randomUUID());
         wine1.setName("Wine 1");
@@ -84,45 +225,111 @@ class WineServiceTest {
         wine2.setId(UUID.randomUUID());
         wine2.setName("Wine 2");
 
-        List<Wine> wines = List.of(wine1, wine2);
+        List<Wine> allWines = List.of(wine1, wine2);
+
+        Page<Wine> winePage = new PageImpl<>(allWines, pageable, 2);
 
         WineResponseDTO response1 = new WineResponseDTO(
-                wine1.getId().toString(), "Wine 1", 2020, "Red", "Dry", "Winery",
-                "Merlot", 1.0, 13.5, "Serbia", "Vojvodina", 4.5, "Desc", "pic.jpg"
+                wine1.getId().toString(), "Wine 1", 2020, "Red", "Dry", "Winery1",
+                "Merlot", 1.0, 13.5, "Country1", "Region1", 4.5, "Desc1", "pic1.jpg"
         );
 
         WineResponseDTO response2 = new WineResponseDTO(
                 wine2.getId().toString(), "Wine 2", 2019, "White", "Sweet", "Winery2",
-                "Chardonnay", 0.75, 12.5, "France", "Bordeaux", 4.2, "Desc2", "pic2.jpg"
+                "Chardonnay", 0.75, 12.5, "Country2", "Region2", 4.2, "Desc2", "pic2.jpg"
         );
 
         List<WineResponseDTO> expectedResponses = List.of(response1, response2);
 
-        when(wineRepository.findAll(any(Pageable.class))).thenReturn(new PageImpl<>(wines));
-        when(wineMapper.toWineResponseDTOList(wines)).thenReturn(expectedResponses);
+        when(wineRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(winePage);
+        when(wineMapper.toWineResponseDTOList(allWines)).thenReturn(expectedResponses);
 
-        List<WineResponseDTO> result = wineService.getAllWines(Pageable.unpaged());
+        // When - pass null criteria
+        PageResponseDTO<WineResponseDTO> result = wineService.getAllWines(pageable, null);
 
+        // Then
         assertNotNull(result);
-        assertEquals(2, result.size());
-        assertEquals("Wine 1", result.get(0).name());
-        assertEquals("Wine 2", result.get(1).name());
+        assertEquals(2, result.content().size());
+        assertEquals(1, result.currentPage());
+        assertEquals(1, result.totalPages());
+        assertEquals(2, result.totalElements());
+        assertEquals(10, result.size());
 
-        verify(wineRepository, times(1)).findAll(any(Pageable.class));
-        verify(wineMapper, times(1)).toWineResponseDTOList(wines);
+        // Verify that specification was still created (with empty criteria)
+        verify(wineRepository, times(1)).findAll(any(Specification.class), eq(pageable));
+        verify(wineMapper, times(1)).toWineResponseDTOList(allWines);
     }
 
     @Test
-    void testGetAllWines_Empty() {
-        when(wineRepository.findAll(any(Pageable.class))).thenReturn(Page.empty());
+    void testGetAllWines_WithEmptyCriteria_ReturnsAllWines() {
+        // Given - empty criteria (all fields null)
+        WineSearchCriteriaDTO emptyCriteria = new WineSearchCriteriaDTO(
+                null, null, null, null, null, null, null, null, null, null, null
+        );
+
+        Pageable pageable = PageRequest.of(0, 10);
+
+        Wine wine1 = new Wine();
+        wine1.setId(UUID.randomUUID());
+        wine1.setName("Wine 1");
+
+        Wine wine2 = new Wine();
+        wine2.setId(UUID.randomUUID());
+        wine2.setName("Wine 2");
+
+        List<Wine> allWines = List.of(wine1, wine2);
+
+        Page<Wine> winePage = new PageImpl<>(allWines, pageable, 2);
+
+        when(wineRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(winePage);
+        when(wineMapper.toWineResponseDTOList(allWines)).thenReturn(List.of(
+                new WineResponseDTO(wine1.getId().toString(), "Wine 1", 2020, "Red", "Dry", "W1",
+                        "Merlot", 1.0, 13.0, "C1", "R1", 4.0, "D1", "P1"),
+                new WineResponseDTO(wine2.getId().toString(), "Wine 2", 2019, "White", "Sweet", "W2",
+                        "Chardonnay", 0.75, 12.0, "C2", "R2", 4.2, "D2", "P2")
+        ));
+
+        // When
+        PageResponseDTO<WineResponseDTO> result = wineService.getAllWines(pageable, emptyCriteria);
+
+        // Then
+        assertNotNull(result);
+        assertEquals(2, result.content().size());
+        assertEquals(1, result.currentPage());
+        assertEquals(1, result.totalPages());
+        assertEquals(2, result.totalElements());
+        assertEquals(10, result.size());
+
+        verify(wineRepository, times(1)).findAll(any(Specification.class), eq(pageable));
+        verify(wineMapper, times(1)).toWineResponseDTOList(allWines);
+    }
+
+    @Test
+    void testGetAllWines_NoMatchingResults_ReturnsEmptyList() {
+        // Given - criteria that matches no wines
+        WineSearchCriteriaDTO criteria = new WineSearchCriteriaDTO(
+                "NonExistentWine", null, null, null, null, null, null, null, null, null, null
+        );
+
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<Wine> emptyPage = new PageImpl<>(List.of(), pageable, 0);
+
+        when(wineRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(emptyPage);
         when(wineMapper.toWineResponseDTOList(List.of())).thenReturn(List.of());
 
-        List<WineResponseDTO> result = wineService.getAllWines(Pageable.unpaged());
+        // When
+        PageResponseDTO<WineResponseDTO> result = wineService.getAllWines(pageable, criteria);
 
+        // Then
         assertNotNull(result);
-        assertTrue(result.isEmpty());
+        assertTrue(result.content().isEmpty());
+        assertEquals(0, result.content().size());
+        assertEquals(1, result.currentPage());
+        assertEquals(0, result.totalPages());
+        assertEquals(0, result.totalElements());
+        assertEquals(10, result.size());
 
-        verify(wineRepository, times(1)).findAll(any(Pageable.class));
+        verify(wineRepository, times(1)).findAll(any(Specification.class), eq(pageable));
         verify(wineMapper, times(1)).toWineResponseDTOList(List.of());
     }
 
