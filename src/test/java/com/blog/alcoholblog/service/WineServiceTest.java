@@ -367,4 +367,31 @@ class WineServiceTest {
         verify(wineRepository, times(1)).save(wineToSave);
         verify(wineMapper, times(1)).toWineResponseDTO(savedWine);
     }
+
+    @Test
+    void testDeleteWine_Success() {
+        UUID wineId = UUID.randomUUID();
+
+        when(wineRepository.existsById(wineId)).thenReturn(true);
+        doNothing().when(wineRepository).deleteById(wineId);
+
+        assertDoesNotThrow(() -> wineService.deleteWineById(wineId));
+
+        verify(wineRepository, times(1)).existsById(wineId);
+        verify(wineRepository, times(1)).deleteById(wineId);
+    }
+
+    @Test
+    void testDeleteWine_Unsuccess() {
+        UUID wineId = UUID.randomUUID();
+
+        when(wineRepository.existsById(wineId)).thenReturn(false);
+
+        WineNotFoundException exception =
+                assertThrows(WineNotFoundException.class, () -> wineService.deleteWineById(wineId));
+
+        assertTrue(exception.getMessage().contains(wineId.toString()));
+        verify(wineRepository, times(1)).existsById(wineId);
+        verify(wineRepository, never()).deleteById(any());
+    }
 }

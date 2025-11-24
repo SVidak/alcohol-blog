@@ -50,4 +50,14 @@ public class WineService {
         Wine savedWine = wineRepository.save(wineToSave);
         return wineMapper.toWineResponseDTO(savedWine);
     }
+
+    @Transactional
+    public void deleteWineById(UUID id) {
+        if (!wineRepository.existsById(id)) {
+            throw new WineNotFoundException("Wine with ID: " + id + " not found");
+        }
+
+        wineRepository.deleteById(id);
+    }
+
 }

@@ -32,10 +32,10 @@ public class WineController {
 
     @GetMapping
     public ResponseEntity<PageResponseDTO<WineResponseDTO>> getAllWines(@RequestParam(required = false, defaultValue = "1") int pageNo,
-                                                             @RequestParam(required = false, defaultValue = "12") int pageSize,
-                                                             @RequestParam(required = false, defaultValue = "name") String sortBy,
-                                                             @RequestParam(required = false, defaultValue = "ASC") String sortOrder,
-                                                             @ModelAttribute WineSearchCriteriaDTO criteriaDTO) {
+                                                                        @RequestParam(required = false, defaultValue = "12") int pageSize,
+                                                                        @RequestParam(required = false, defaultValue = "name") String sortBy,
+                                                                        @RequestParam(required = false, defaultValue = "ASC") String sortOrder,
+                                                                        @ModelAttribute WineSearchCriteriaDTO criteriaDTO) {
 
         PageRequest pageRequest = PageRequest.of(pageNo - 1, pageSize, createSort(sortBy, sortOrder));
 
@@ -55,15 +55,19 @@ public class WineController {
         return ResponseEntity.created(location).body(createdWine);
     }
 
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteWine(@Valid @PathVariable UUID id) {
+        wineService.deleteWineById(id);
+        return ResponseEntity.noContent().build();
+    }
+
     private Sort createSort(String sortBy, String sortOrder) {
         Sort sort;
-        if(sortOrder.equalsIgnoreCase("ASC")){
+        if (sortOrder.equalsIgnoreCase("ASC")) {
             sort = Sort.by(sortBy).ascending();
-        }
-        else if(sortOrder.equalsIgnoreCase("DESC")){
+        } else if (sortOrder.equalsIgnoreCase("DESC")) {
             sort = Sort.by(sortBy).descending();
-        }
-        else {
+        } else {
             throw new IllegalArgumentException("Invalid sort parameter");
         }
         return sort;
