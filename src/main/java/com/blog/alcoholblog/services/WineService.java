@@ -1,9 +1,6 @@
 package com.blog.alcoholblog.services;
 
-import com.blog.alcoholblog.dto.CreateWineRequestDTO;
-import com.blog.alcoholblog.dto.PageResponseDTO;
-import com.blog.alcoholblog.dto.WineResponseDTO;
-import com.blog.alcoholblog.dto.WineSearchCriteriaDTO;
+import com.blog.alcoholblog.dto.*;
 import com.blog.alcoholblog.exception.WineNotFoundException;
 import com.blog.alcoholblog.mapper.WineMapper;
 import com.blog.alcoholblog.model.Wine;
@@ -52,12 +49,21 @@ public class WineService {
     }
 
     @Transactional
+    public WineResponseDTO updateWine(UUID id, UpdateWineRequestDTO updateWineRequestDTO) {
+        Wine wineToUpdate = wineRepository.findById(id)
+                .orElseThrow(() -> new WineNotFoundException(id.toString()));
+
+        wineMapper.updateWineFromDTO(updateWineRequestDTO, wineToUpdate);
+        Wine updatedWine = wineRepository.save(wineToUpdate);
+        return wineMapper.toWineResponseDTO(updatedWine);
+    }
+
+    @Transactional
     public void deleteWineById(UUID id) {
-        if (!wineRepository.existsById(id)) {
+        int deleted = wineRepository.deleteByIdReturningCount(id);
+        if (deleted == 0) {
             throw new WineNotFoundException("Wine with ID: " + id + " not found");
         }
-
-        wineRepository.deleteById(id);
     }
 
 }

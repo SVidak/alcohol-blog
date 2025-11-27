@@ -1,9 +1,6 @@
 package com.blog.alcoholblog.service;
 
-import com.blog.alcoholblog.dto.CreateWineRequestDTO;
-import com.blog.alcoholblog.dto.PageResponseDTO;
-import com.blog.alcoholblog.dto.WineResponseDTO;
-import com.blog.alcoholblog.dto.WineSearchCriteriaDTO;
+import com.blog.alcoholblog.dto.*;
 import com.blog.alcoholblog.exception.WineNotFoundException;
 import com.blog.alcoholblog.mapper.WineMapper;
 import com.blog.alcoholblog.model.Wine;
@@ -144,8 +141,8 @@ class WineServiceTest {
         assertEquals(10, result.size());
 
         // Access the content first, then the properties
-        WineResponseDTO firstWine = (WineResponseDTO) result.content().get(0);
-        WineResponseDTO secondWine = (WineResponseDTO) result.content().get(1);
+        WineResponseDTO firstWine = result.content().get(0);
+        WineResponseDTO secondWine = result.content().get(1);
         assertEquals("Test Wine 1", firstWine.name());
         assertEquals("Test Wine 2", secondWine.name());
 
@@ -203,7 +200,7 @@ class WineServiceTest {
         assertEquals(10, result.size());
 
         // Access the content first, then the properties
-        WineResponseDTO wineResponse = result.content().get(0);
+        WineResponseDTO wineResponse = result.content().getFirst();
         assertEquals("Merlot Reserve", wineResponse.name());
         assertEquals("France", wineResponse.country());
         assertEquals(2020, wineResponse.year());
@@ -323,7 +320,6 @@ class WineServiceTest {
         // Then
         assertNotNull(result);
         assertTrue(result.content().isEmpty());
-        assertEquals(0, result.content().size());
         assertEquals(1, result.currentPage());
         assertEquals(0, result.totalPages());
         assertEquals(0, result.totalElements());
@@ -369,29 +365,108 @@ class WineServiceTest {
     }
 
     @Test
+    void testUpdateWine_Success() {
+        UUID wineId = UUID.randomUUID();
+
+        Wine existingWine = new Wine();
+        existingWine.setId(wineId);
+        existingWine.setName("Old Name");
+
+        UpdateWineRequestDTO dto = new UpdateWineRequestDTO(
+                "New Name",
+                null, null, null, null,
+                null, null, null, null,
+                null, null, null,
+                null
+        );
+
+        when(wineRepository.findById(wineId))
+                .thenReturn(Optional.of(existingWine));
+
+        doAnswer(invocation -> {
+            UpdateWineRequestDTO src = invocation.getArgument(0);
+            Wine tgt = invocation.getArgument(1);
+
+            if (src.name() != null) tgt.setName(src.name());
+
+            return null;
+        }).when(wineMapper).updateWineFromDTO(any(), any());
+
+        Wine savedWine = new Wine();
+        savedWine.setId(wineId);
+        savedWine.setName("New Name");
+
+        when(wineRepository.save(existingWine)).thenReturn(savedWine);
+
+        WineResponseDTO updatedDto = new WineResponseDTO(
+                wineId.toString(),
+                "New Name",
+                null, null, null, null, null,
+                null, null, null, null, null,
+                null, null
+        );
+
+        when(wineMapper.toWineResponseDTO(savedWine))
+                .thenReturn(updatedDto);
+
+        WineResponseDTO result = wineService.updateWine(wineId, dto);
+
+        assertNotNull(result);
+        assertEquals("New Name", result.name());
+
+        verify(wineRepository).findById(wineId);
+        verify(wineMapper).updateWineFromDTO(dto, existingWine);
+        verify(wineRepository).save(existingWine);
+        verify(wineMapper).toWineResponseDTO(savedWine);
+    }
+
+
+
+    @Test
+    void testUpdateWine_NotFound() {
+        UUID wineId = UUID.randomUUID();
+
+        UpdateWineRequestDTO dto = new UpdateWineRequestDTO(
+                "New name",
+                null, null, null, null, null,
+                null, null, null, null,
+                null, null,
+                null
+        );
+
+        when(wineRepository.findById(wineId)).thenReturn(Optional.empty());
+
+        assertThrows(WineNotFoundException.class,
+                () -> wineService.updateWine(wineId, dto)
+        );
+
+        verify(wineRepository).findById(wineId);
+        verify(wineMapper, never()).updateWineFromDTO(any(), any());
+        verify(wineRepository, never()).save(any());
+    }
+
+    @Test
     void testDeleteWine_Success() {
         UUID wineId = UUID.randomUUID();
 
-        when(wineRepository.existsById(wineId)).thenReturn(true);
-        doNothing().when(wineRepository).deleteById(wineId);
+        when(wineRepository.deleteByIdReturningCount(wineId)).thenReturn(1);
 
         assertDoesNotThrow(() -> wineService.deleteWineById(wineId));
 
-        verify(wineRepository, times(1)).existsById(wineId);
-        verify(wineRepository, times(1)).deleteById(wineId);
+        verify(wineRepository, times(1)).deleteByIdReturningCount(wineId);
     }
 
     @Test
     void testDeleteWine_Unsuccess() {
         UUID wineId = UUID.randomUUID();
 
-        when(wineRepository.existsById(wineId)).thenReturn(false);
+        when(wineRepository.deleteByIdReturningCount(wineId)).thenReturn(0);
 
         WineNotFoundException exception =
                 assertThrows(WineNotFoundException.class, () -> wineService.deleteWineById(wineId));
 
         assertTrue(exception.getMessage().contains(wineId.toString()));
-        verify(wineRepository, times(1)).existsById(wineId);
-        verify(wineRepository, never()).deleteById(any());
+
+        verify(wineRepository, times(1)).deleteByIdReturningCount(wineId);
     }
 }

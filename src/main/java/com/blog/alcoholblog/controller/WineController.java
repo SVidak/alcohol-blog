@@ -1,9 +1,6 @@
 package com.blog.alcoholblog.controller;
 
-import com.blog.alcoholblog.dto.CreateWineRequestDTO;
-import com.blog.alcoholblog.dto.PageResponseDTO;
-import com.blog.alcoholblog.dto.WineResponseDTO;
-import com.blog.alcoholblog.dto.WineSearchCriteriaDTO;
+import com.blog.alcoholblog.dto.*;
 import com.blog.alcoholblog.services.WineService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -53,6 +50,12 @@ public class WineController {
                 .toUri();
 
         return ResponseEntity.created(location).body(createdWine);
+    }
+
+    @PatchMapping("/{id}")
+    public ResponseEntity<WineResponseDTO> updateWine(@Valid @PathVariable UUID id, @RequestBody UpdateWineRequestDTO updateWineRequestDTO) {
+        WineResponseDTO updatedWine = wineService.updateWine(id, updateWineRequestDTO);
+        return ResponseEntity.ok(updatedWine);
     }
 
     @DeleteMapping("/{id}")
