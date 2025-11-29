@@ -11,9 +11,9 @@ import java.util.UUID;
 @Table(name = "wines")
 @Getter
 @Setter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class Wine {
 
     @Id
@@ -66,7 +66,7 @@ public class Wine {
     private Double score;
 
     @NotBlank
-    @Column(name = "description", nullable = false)
+    @Column(name = "description", nullable = false, columnDefinition = "TEXT")
     private String description;
 
     @NotBlank
